@@ -1,22 +1,27 @@
+import { getAuthSession } from "@/lib/auth";
 import { createUploadthing, type FileRouter } from "uploadthing/next";
  
 const f = createUploadthing();
  
-const auth = (req: Request) => ({ id: "fakeId" }); // Fake auth function
+const handleAuth = async () => {
+  const session = await getAuthSession();
+
+  if (!session?.user) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
+  return { userId: session?.user };
+};
+
  
 export const ourFileRouter = {
   imageUploader: f({ image: { maxFileSize: "4MB" } })
-    .middleware(async ({ req }) => {
-      const user = await auth(req);
- 
-      if (!user) throw new Error("Unauthorized");
- 
-      return { userId: user.id };
+    .middleware(async () => {
+      const userId = await handleAuth();
+      return { userId };
     })
-    .onUploadComplete(async ({ metadata, file }) => {
-
-      return { uploadedBy: metadata.userId };
-    }),
+    .onUploadComplete(() => {}),
 } satisfies FileRouter;
  
 export type OurFileRouter = typeof ourFileRouter;
+
